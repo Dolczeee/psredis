@@ -2,50 +2,44 @@
 
 namespace Psredis\Command;
 
+use Psredis\Service\RedisConnectionService;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Context;
-use Db;
 
 class CacheWarmupCommand extends Command
 {
-    protected static $defaultName = 'psredis:warmup-cache';
+    protected static $defaultName = 'psredis:cache:warmup';
+    protected static $defaultDescription = 'Warm up Redis cache for PrestaShop';
 
-    protected function configure()
+    private ?RedisConnectionService $redis;
+
+    public function __construct(?RedisConnectionService $redis = null)
     {
-        $this->setDescription('Generuje pamięć podręczną dla produktów i kategorii (pre-caching).');
+        parent::__construct();
+        $this->redis = $redis;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function configure(): void
     {
-        $output->writeln('<info>Rozpoczęcie generowania pamięci podręcznej...</info>');
+        $this->setDescription(self::$defaultDescription);
+    }
 
-        // Pobranie listy ID produktów i kategorii
-        $product_ids = Db::getInstance()->executeS('SELECT id_product FROM ' . _DB_PREFIX_ . 'product');
-        $category_ids = Db::getInstance()->executeS('SELECT id_category FROM ' . _DB_PREFIX_ . 'category');
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $output->writeln('Psredis cache warmup started');
 
-        $context = Context::getContext();
-
-        // 1. Warmup dla produktów
-        $output->writeln("Buforowanie " . count($product_ids) . " produktów...");
-        foreach ($product_ids as $row) {
-            // Tworzymy obiekt Product, który automatycznie buforuje się przy ładowaniu
-            $product = new Product($row['id_product'], true, $context->language->id, $context->shop->id);
-            // Można dodać dodatkowe buforowanie np. strony produktu poprzez wysłanie cURL
-            // file_get_contents($context->link->getProductLink($product));
-            unset($product);
+        if ($this->redis && method_exists($this->redis, 'warmup')) {
+            try {
+                $this->redis->warmup();
+                $output->writeln('Warmup zakończony pomyślnie.');
+            } catch (\Throwable $e) {
+                $output->writeln('Błąd podczas warmup: ' . $e->getMessage());
+                return Command::FAILURE;
+            }
+        } else {
+            $output->writeln('RedisConnectionService nie jest dostępny lub metoda warmup() nie istnieje.');
         }
-
-        // 2. Warmup dla kategorii
-        $output->writeln("Buforowanie " . count($category_ids) . " kategorii...");
-        foreach ($category_ids as $row) {
-            $category = new Category($row['id_category'], $context->language->id, $context->shop->id);
-            // file_get_contents($context->link->getCategoryLink($category));
-            unset($category);
-        }
-
-        $output->writeln('<info>Generowanie pamięci podręcznej zakończone pomyślnie.</info>');
 
         return Command::SUCCESS;
     }

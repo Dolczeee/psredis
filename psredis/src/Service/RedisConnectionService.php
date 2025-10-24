@@ -2,127 +2,81 @@
 
 namespace Psredis\Service;
 
-use Exception;
-use Configuration;
-
 class RedisConnectionService
 {
-    private $connectionFilePath;
-    private $connections = [];
-    private $defaultClient;
+    private $client;
 
-    public function __construct(string $modulePath)
+    public function __construct($client = null)
     {
-        // Ścieżka do pliku konfiguracyjnego (np. /app/config/redis_connection.json)
-        $this->connectionFilePath = $modulePath . '/../app/config/redis_connection.json';
-        $this->loadConnections();
+        $this->client = $client ?? $this->createClient();
     }
 
-    /**
-     * Wczytuje konfigurację połączeń z bezpiecznego pliku.
-     */
-    private function loadConnections()
+    private function createClient()
     {
-        if (file_exists($this->connectionFilePath)) {
-            $json_data = file_get_contents($this->connectionFilePath);
-            $this->connections = json_decode($json_data, true);
-        } else {
-            $this->connections = [];
+        if (class_exists(\Redis::class)) {
+            $redis = new \Redis();
+            @ $redis->connect('127.0.0.1', 6379);
+            return $redis;
         }
+
+        if (class_exists(\Predis\Client::class)) {
+            return new \Predis\Client();
+        }
+
+        return null;
     }
 
-    /**
-     * Zapisuje konfigurację połączeń do bezpiecznego pliku.
-     */
-    public function saveConnections(array $data)
+    public function isAvailable(): bool
     {
-        $json_data = json_encode($data, JSON_PRETTY_PRINT);
-        if (file_put_contents($this->connectionFilePath, $json_data)) {
-            $this->connections = $data;
-            return true;
+        try {
+            if ($this->client instanceof \Redis) {
+                $pong = $this->client->ping();
+                return $pong === '+PONG' || $pong === 'PONG' || $pong === true;
+            }
+
+            if ($this->client && method_exists($this->client, 'ping')) {
+                $res = $this->client->ping();
+                return (bool) $res;
+            }
+        } catch (\Throwable $e) {
         }
+
         return false;
     }
 
-    /**
-     * Tworzy i zwraca klienta Redis (domyślnie pierwszy serwer z listy).
-     * Obsługa Predis, PHPRedis (i wsparcie dla KeyDB/DragonflyDB).
-     */
-    public function getClient(string $serverId = null)
+    public function warmup(): void
     {
-        if (defined('PSREDIS_DISABLE_CACHE') || !Configuration::get('PSREDIS_ENABLED')) {
-            return null; // Cache wyłączony
+        if (!$this->client) {
+            throw new \RuntimeException('Redis client is not available');
         }
 
-        if ($this->defaultClient) {
-            return $this->defaultClient;
-        }
-
-        if (empty($this->connections)) {
-            throw new Exception('Brak skonfigurowanych serwerów Redis.');
-        }
-
-        $connection = $serverId ? ($this->connections[$serverId] ?? null) : reset($this->connections);
-
-        if (!$connection) {
-            throw new Exception('Nie znaleziono żądanego połączenia Redis.');
-        }
-
-        $host = $connection['host'];
-        $port = $connection['port'];
-        $driver = $connection['driver']; // np. 'predis', 'phpredis'
+        $key = 'psredis:warmup:' . bin2hex(random_bytes(4));
+        $value = '1';
 
         try {
-            if ($driver === 'phpredis' && extension_loaded('redis')) {
-                $redis = new \Redis();
-                // Obsługa gniazda Unix
-                if (isset($connection['socket']) && $connection['socket']) {
-                    $redis->connect($connection['socket']);
-                } else {
-                    $redis->connect($host, $port);
-                }
-                
-                // Autoryzacja i wybór bazy danych
-                if (isset($connection['password']) && $connection['password']) {
-                    $redis->auth($connection['password']);
-                }
-                if (isset($connection['database']) && $connection['database'] !== '') {
-                    $redis->select((int)$connection['database']);
-                }
-                $this->defaultClient = $redis;
-            } elseif ($driver === 'predis') {
-                // Implementacja Predis
-                $parameters = [
-                    'scheme' => 'tcp',
-                    'host'   => $host,
-                    'port'   => $port,
-                ];
-                if (isset($connection['password']) && $connection['password']) {
-                    $parameters['password'] = $connection['password'];
-                }
-                if (isset($connection['database']) && $connection['database'] !== '') {
-                    $parameters['database'] = $connection['database'];
-                }
-
-                $this->defaultClient = new \Predis\Client($parameters);
-                $this->defaultClient->connect();
-            } else {
-                throw new Exception('Nieobsługiwany sterownik Redis: ' . $driver);
+            if ($this->client instanceof \Redis) {
+                $this->client->set($key, $value, 5);
+                $this->client->get($key);
+                $this->client->del($key);
+                return;
             }
 
-            return $this->defaultClient;
+            if (method_exists($this->client, 'set')) {
+                $this->client->set($key, $value);
+                if (method_exists($this->client, 'get')) {
+                    $this->client->get($key);
+                }
+                if (method_exists($this->client, 'del')) {
+                    $this->client->del([$key]);
+                } elseif (method_exists($this->client, 'delete')) {
+                    $this->client->delete($key);
+                }
+                return;
+            }
 
-        } catch (Exception $e) {
-            // Wyrzuć błąd połączenia
-            throw new Exception("Błąd połączenia z Redis ({$host}:{$port}): " . $e->getMessage());
+            throw new \RuntimeException('Unsupported Redis client implementation');
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('Redis warmup failed: ' . $e->getMessage(), 0, $e);
         }
-    }
-
-    /**
-     * Zwraca listę skonfigurowanych połączeń (dla interfejsu administracyjnego)
-     */
-    public function getConnections()
-    {
-        return $this->connections;
     }
 }
