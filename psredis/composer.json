@@ -3,6 +3,12 @@
   "description": "PrestaShop module - Redis integration",
   "type": "prestashop-module",
   "license": "MIT",
+  "authors": [
+    {
+      "name": "DolceCX",
+      "homepage": "https://github.com/Dolczeee"
+    }
+  ],
   "require": {
     "predis/predis": "^1.1"
   },

@@ -17,7 +17,7 @@ class Psredis extends Module
         $this->name = 'psredis';
         $this->tab = 'administration';
         $this->version = '1.0.0';
-        $this->author = 'Your Name';
+        $this->author = 'DolceCX';
         $this->need_instance = 0;
         $this->bootstrap = true;
 
@@ -30,24 +30,18 @@ class Psredis extends Module
 
     public function install(): bool
     {
-        // zarejestruj hooki potrzebne przez moduł tutaj
         return parent::install()
-            && $this->registerHook('actionDispatcher') // przykładowy hook
+            && $this->registerHook('actionDispatcher')
             && $this->registerHook('displayBackOfficeHeader');
     }
 
     public function uninstall(): bool
     {
-        // wyczyść ustawienia (jeśli są)
         return parent::uninstall();
     }
 
-    /**
-     * Opcjonalna konfiguracja strony konfiguracyjnej modułu
-     */
     public function getContent(): string
     {
-        // zwróć HTML konfiguracji (jeśli potrzebne)
         return '<div class="module-config"><h3>' . $this->displayName . '</h3></div>';
     }
 }

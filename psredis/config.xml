@@ -3,7 +3,7 @@
   <name>psredis</name>
   <display_name>PS Redis</display_name>
   <version>1.0.0</version>
-  <author>Your Name</author>
+  <author>DolceCX</author>
   <tab>administration</tab>
   <need_instance>0</need_instance>
   <description>Integracja Redis dla PrestaShop (cache, warmup, status).</description>
