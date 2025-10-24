@@ -1,0 +1,38 @@
+services:
+    # ----------------------------------------------------
+    # Konfiguracja Usług Modułu Psredis
+    # ----------------------------------------------------
+
+    # Serwis zarządzania połączeniami Redis
+    psredis.service.connection:
+        class: Psredis\Service\RedisConnectionService
+        arguments:
+            - '%kernel.project_dir%/modules/psredis' # Ścieżka do modułu
+
+    # Adapter Cache Redis
+    psredis.cache.adapter:
+        class: Psredis\Cache\RedisCacheAdapter
+        arguments:
+            - '@psredis.service.connection'
+
+    # Subskrybent zdarzeń do automatycznego czyszczenia cache
+    psredis.hook.subscriber:
+        class: Psredis\Hook\CacheHookSubscriber
+        arguments:
+            - '@psredis.cache.adapter'
+        tags:
+            - { name: hook.subscriber } # Tag rejestrujący subskrybenta w systemie hooków PrestaShop
+
+    # Komenda Konsolowa (CRON)
+    psredis.command.warmup:
+        class: Psredis\Command\CacheWarmupCommand
+        tags:
+            - { name: console.command } # Tag rejestrujący komendę konsolową Symfony
+
+    # ----------------------------------------------------
+    # Zastąpienie Domyślnego Systemu Cache (Wymaga modyfikacji DI w kontenerze)
+    # ----------------------------------------------------
+    
+    # W PrestaShop to jest zazwyczaj realizowane przez zmodyfikowanie 
+    # domyślnego serwisu "cache" lub "cache_adapter" w pliku override, 
+    # aby wskazywał na '@psredis.cache.adapter', gdy moduł jest aktywny.

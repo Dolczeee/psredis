@@ -1,0 +1,14 @@
+services:
+    # Wstrzyknięcie RedisCacheAdapter jako domyślnego serwisu buforowania.
+    # Wymagane, aby PrestaShop używał naszej logiki Redis zamiast FileSystem.
+    
+    # Przesłonięcie standardowego serwisu adaptera cache (może się różnić w P9)
+    # Zwykle jest to 'prestashop.cache.adapter' lub alias.
+    # Używamy definicji, która wskazuje na naszą klasę RedisCacheAdapter.
+    
+    # Musimy to warunkowo wykonać tylko, gdy PSREDIS_ENABLED jest TRUE.
+    # W praktyce, w kodzie psredis.php, musimy wstrzyknąć tę definicję.
+    
+    prestashop.cache.adapter:
+        alias: psredis.cache.adapter
+        # Ten alias kieruje wszystkie zapytania do cache'u na nasz RedisCacheAdapter
