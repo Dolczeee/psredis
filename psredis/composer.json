@@ -1,4 +1,8 @@
 {
+  "name": "yourvendor/psredis",
+  "description": "PrestaShop module - Redis integration",
+  "type": "prestashop-module",
+  "license": "MIT",
   "require": {
     "predis/predis": "^1.1"
   },

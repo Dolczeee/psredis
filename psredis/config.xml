@@ -1,27 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module>
-    <name>psredis</name>
-    <displayName><![CDATA[Redis Cache & Performance Optimizer]]></displayName>
-    <version><![CDATA[1.0.0]]></version>
-    <description><![CDATA[Zaawansowany moduł Redis dla PrestaShop 9.0: redukcja zapytań, obsługa wielu serwerów i optymalizacja TTFB.]]></description>
-    <author><![CDATA[DolceCX]]></author>
-    <tab><![CDATA[front_office_features]]></tab>
-    <is_configurable>1</is_configurable>
-    <need_instance>0</need_instance>
+  <name>psredis</name>
+  <display_name>PS Redis</display_name>
+  <version>1.0.0</version>
+  <author>Your Name</author>
+  <tab>administration</tab>
+  <need_instance>0</need_instance>
+  <description>Integracja Redis dla PrestaShop (cache, warmup, status).</description>
 
-    <!-- DODANIE AUTOLOADINGU KLAS PRZEZ PRESTASHOP -->
-    <autoload>
-        <!--
-            Autoloading dla wszystkich klas z katalogów src/ (Psredis\*)
-            oraz dla standardowych klas modułów (np. RedisAdmin)
-        -->
-        <class_map>
-            <!-- Mapuje katalogi na Autoloader PrestaShop/Legacy -->
-            <dir>src/Command</dir>
-            <dir>src/Cache</dir>
-            <dir>src/Service</dir>
-            <dir>src/Hook</dir>
-            <dir>controllers/admin</dir>
-        </class_map>
-    </autoload>
+  <ps_versions_compliancy>
+    <version from="9.0.0" to="9.99.99"/>
+  </ps_versions_compliancy>
+
+  <confirmUninstall>Are you sure you want to uninstall PS Redis?</confirmUninstall>
+
+  <assets>
+    <!-- jeśli masz logo, wpisz tutaj nazwę pliku np. logo.png -->
+  </assets>
 </module>
