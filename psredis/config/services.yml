@@ -4,51 +4,43 @@ services:
     autoconfigure: true
     public: false
 
+  # Serwis zarządzania połączeniami Redis
+  psredis.service.connection:
+    class: Psredis\Service\RedisConnectionService
+    file: '%kernel.project_dir%/modules/psredis/src/Service/RedisConnectionService.php'
+    arguments:
+      - '%kernel.project_dir%/modules/psredis'
+    public: true
+
+  # Adapter Cache Redis
+  psredis.cache.adapter:
+    class: Psredis\Cache\RedisCacheAdapter
+    file: '%kernel.project_dir%/modules/psredis/src/Cache/RedisCacheAdapter.php'
+    arguments:
+      - '@psredis.service.connection'
+    public: true
+
+  # Subskrybent zdarzeń do automatycznego czyszczenia cache
+  psredis.hook.subscriber:
+    class: Psredis\Hook\CacheHookSubscriber
+    file: '%kernel.project_dir%/modules/psredis/src/Hook/CacheHookSubscriber.php'
+    arguments:
+      - '@psredis.cache.adapter'
+    tags:
+      - { name: hook.subscriber }
+
+  # Komenda Konsolowa (CRON)
   Psredis\Command\CacheWarmupCommand:
-    tags: ['console.command']
+    class: Psredis\Command\CacheWarmupCommand
+    file: '%kernel.project_dir%/modules/psredis/src/Command/CacheWarmupCommand.php'
+    tags:
+      - { name: console.command, command: 'psredis:cache:warmup' }
     public: true
 
-  psredis.command.warmup:
-    class: 'Psredis\Command\CacheWarmupCommand'
-    tags: ['console.command']
-    public: true
-
-  Psredis\Service\RedisConnectionService: ~
-
-    # ----------------------------------------------------
-    # Konfiguracja Usług Modułu Psredis
-    # ----------------------------------------------------
-
-    # Serwis zarządzania połączeniami Redis
-    psredis.service.connection:
-        class: Psredis\Service\RedisConnectionService
-        arguments:
-            - '%kernel.project_dir%/modules/psredis' # Ścieżka do modułu
-
-    # Adapter Cache Redis
-    psredis.cache.adapter:
-        class: Psredis\Cache\RedisCacheAdapter
-        arguments:
-            - '@psredis.service.connection'
-
-    # Subskrybent zdarzeń do automatycznego czyszczenia cache
-    psredis.hook.subscriber:
-        class: Psredis\Hook\CacheHookSubscriber
-        arguments:
-            - '@psredis.cache.adapter'
-        tags:
-            - { name: hook.subscriber } # Tag rejestrujący subskrybenta w systemie hooków PrestaShop
-
-    # Komenda Konsolowa (CRON)
-    psredis.command.warmup:
-        class: 'Psredis\Command\CacheWarmupCommand'
-        tags:
-            - { name: console.command } # Tag rejestrujący komendę konsolową Symfony
-
-    # ----------------------------------------------------
-    # Zastąpienie Domyślnego Systemu Cache (Wymaga modyfikacji DI w kontenerze)
-    # ----------------------------------------------------
-    
-    # W PrestaShop to jest zazwyczaj realizowane przez zmodyfikowanie 
-    # domyślnego serwisu "cache" lub "cache_adapter" w pliku override, 
-    # aby wskazywał na '@psredis.cache.adapter', gdy moduł jest aktywny.
+  # ----------------------------------------------------
+  # Zastąpienie Domyślnego Systemu Cache (Opcjonalne, poza plikiem services.yml)
+  # ----------------------------------------------------
+  # Jeśli potrzebujesz użyć tego adaptera jako głównego cache (np. w PrestaShop), 
+  # musisz zdefiniować alias dla domyślnego serwisu cache (np. 'cache' lub 
+  # 'cache.adapter') w innym pliku konfiguracyjnym (np. override), 
+  # aby wskazywał na '@psredis.cache.adapter'.

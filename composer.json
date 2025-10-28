@@ -1,0 +1,11 @@
+{
+    "name": "your-vendor/psredis",
+    "autoload": {
+        "psr-4": {
+            "Psredis\\": "psredis/src/"
+        }
+    },
+    "require": {
+        "php": ">=7.4"
+    }
+}
